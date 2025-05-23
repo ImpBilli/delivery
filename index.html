@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cardápio Digital</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+        h1, h2 { text-align: center; }
+        .menu-section { margin-bottom: 32px; }
+        .menu-list { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .menu-item { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 16px; width: 260px; display: flex; flex-direction: column; align-items: center; }
+        .menu-item img { width: 220px; height: 140px; object-fit: cover; border-radius: 6px; }
+        .menu-item h3 { margin: 10px 0 4px 0; }
+        .menu-item p { font-size: 0.95em; color: #444; margin: 0 0 8px 0; text-align: center; }
+        .menu-item .price { font-weight: bold; color: #1a8917; }
+        .menu-item .portion-sizes { margin: 8px 0; }
+        .menu-item button { margin-top: 8px; padding: 6px 16px; border: none; background: #1a8917; color: #fff; border-radius: 4px; cursor: pointer; }
+        .menu-item button:hover { background: #166d13; }
+        .modal, #customer-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0008; align-items: center; justify-content: center; z-index: 10; }
+        .modal-content, .customer-content { background: #fff; padding: 32px 24px; border-radius: 8px; min-width: 320px; max-width: 90vw; }
+        .modal-content h2, .customer-content h2 { margin-top: 0; }
+        .modal-content button, .customer-content button { margin: 8px 4px 0 0; }
+        .customer-content input, .customer-content select { width: 100%; margin-bottom: 12px; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        @media (max-width: 700px) {
+            .menu-list { flex-direction: column; align-items: center; }
+            .menu-item { width: 95vw; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Cardápio Digital</h1>
+
+    <!-- Cadastro do Cliente -->
+    <div id="customer-modal" style="display:flex;">
+        <div class="customer-content">
+            <h2>Cadastro do Cliente</h2>
+            <form id="customer-form">
+                <input type="text" id="customer-name" placeholder="Nome completo" required>
+                <input type="tel" id="customer-phone" placeholder="Telefone/WhatsApp" required>
+                <select id="order-type" required>
+                    <option value="">Selecione: Delivery ou Mesa</option>
+                    <option value="delivery">Delivery</option>
+                    <option value="mesa">Comer na Mesa</option>
+                </select>
+                <input type="text" id="customer-table" placeholder="Número da mesa" style="display:none;">
+                <button type="submit">Entrar no Cardápio</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lanches -->
+    <div class="menu-section">
+        <h2>Lanches</h2>
+        <div class="menu-list" id="lanches-list"></div>
+    </div>
+
+    <!-- Porções -->
+    <div class="menu-section">
+        <h2>Porções</h2>
+        <div class="menu-list" id="porcoes-list"></div>
+    </div>
+
+    <!-- Bebidas -->
+    <div class="menu-section">
+        <h2>Bebidas</h2>
+        <div class="menu-list" id="bebidas-list"></div>
+    </div>
+</div>
+
+<!-- Modal Pedido -->
+<div class="modal" id="order-modal">
+    <div class="modal-content">
+        <h2>Seu Pedido</h2>
+        <div id="pedido-produto"></div>
+        <div id="pedido-valor"></div>
+        <button id="confirmar-pedido">Confirmar Pedido</button>
+        <button onclick="fecharModal()">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    // Dados dos lanches (24)
+    const lanches = [
+        { nome: "X-Burguer", preco: 15, descricao: "Hambúrguer, queijo, alface, tomate e maionese especial.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Salada", preco: 16, descricao: "Hambúrguer, queijo, alface, tomate, ovo e maionese.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Bacon", preco: 18, descricao: "Hambúrguer, queijo, bacon crocante, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Egg", preco: 17, descricao: "Hambúrguer, queijo, ovo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Frango", preco: 16, descricao: "Filé de frango grelhado, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Calabresa", preco: 17, descricao: "Calabresa fatiada, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Tudo", preco: 22, descricao: "Hambúrguer, frango, bacon, ovo, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Cheddar", preco: 17, descricao: "Hambúrguer, cheddar cremoso, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Catupiry", preco: 18, descricao: "Hambúrguer, catupiry, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Veggie", preco: 16, descricao: "Hambúrguer vegetal, queijo, alface, tomate e maionese vegana.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Picanha", preco: 23, descricao: "Hambúrguer de picanha, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Costela", preco: 22, descricao: "Hambúrguer de costela, queijo, cebola caramelizada e maionese.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Filet", preco: 20, descricao: "Filé mignon, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Presunto", preco: 15, descricao: "Hambúrguer, presunto, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-4 Queijos", preco: 19, descricao: "Hambúrguer, 4 tipos de queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Lombo", preco: 18, descricao: "Lombo suíno, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Camarão", preco: 25, descricao: "Hambúrguer de camarão, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Peixe", preco: 18, descricao: "Filé de peixe empanado, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Frango Catupiry", preco: 19, descricao: "Frango desfiado, catupiry, queijo, alface e tomate.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Bacon Egg", preco: 19, descricao: "Hambúrguer, bacon, ovo, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Calabresa Catupiry", preco: 19, descricao: "Calabresa, catupiry, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Frango Bacon", preco: 19, descricao: "Frango, bacon, queijo, alface, tomate e maionese.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Salada Veggie", preco: 16, descricao: "Hambúrguer vegetal, queijo, alface, tomate e maionese vegana.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "X-Costela Cheddar", preco: 23, descricao: "Costela, cheddar, queijo, cebola caramelizada e maionese.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" }
+    ];
+
+    // Porções (com 3 tamanhos)
+    const porcoes = [
+        { nome: "Batata Frita", descricao: "Batata frita crocante.", tamanhos: [{t:"P",v:10},{t:"M",v:15},{t:"G",v:20}], img: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Calabresa Acebolada", descricao: "Calabresa fatiada com cebola.", tamanhos: [{t:"P",v:12},{t:"M",v:18},{t:"G",v:24}], img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Mandioca Frita", descricao: "Mandioca frita sequinha.", tamanhos: [{t:"P",v:11},{t:"M",v:16},{t:"G",v:21}], img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Polenta Frita", descricao: "Polenta frita crocante.", tamanhos: [{t:"P",v:11},{t:"M",v:16},{t:"G",v:21}], img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Frango à Passarinho", descricao: "Frango temperado e frito.", tamanhos: [{t:"P",v:15},{t:"M",v:22},{t:"G",v:28}], img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Onion Rings", descricao: "Anéis de cebola empanados.", tamanhos: [{t:"P",v:13},{t:"M",v:18},{t:"G",v:23}], img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Queijo Coalho", descricao: "Espetinhos de queijo coalho.", tamanhos: [{t:"P",v:14},{t:"M",v:19},{t:"G",v:24}], img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Torresmo", descricao: "Torresmo crocante.", tamanhos: [{t:"P",v:13},{t:"M",v:18},{t:"G",v:23}], img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" }
+    ];
+
+    // Bebidas
+    const bebidas = [
+        { nome: "Coca-Cola Lata", preco: 6, descricao: "Refrigerante gelado 350ml.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Guaraná Lata", preco: 6, descricao: "Refrigerante gelado 350ml.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Fanta Laranja Lata", preco: 6, descricao: "Refrigerante gelado 350ml.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Fanta Uva Lata", preco: 6, descricao: "Refrigerante gelado 350ml.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Sprite Lata", preco: 6, descricao: "Refrigerante gelado 350ml.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Coca-Cola 1L", preco: 10, descricao: "Refrigerante gelado 1 litro.", img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Guaraná 1L", preco: 10, descricao: "Refrigerante gelado 1 litro.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Heineken Longneck", preco: 12, descricao: "Cerveja Heineken 330ml.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Brahma Longneck", preco: 10, descricao: "Cerveja Brahma 330ml.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Skol Longneck", preco: 10, descricao: "Cerveja Skol 330ml.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Heineken Lata", preco: 9, descricao: "Cerveja Heineken lata 350ml.", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Brahma Lata", preco: 8, descricao: "Cerveja Brahma lata 350ml.", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Skol Lata", preco: 8, descricao: "Cerveja Skol lata 350ml.", img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80" },
+        { nome: "Água Mineral", preco: 4, descricao: "Água mineral sem gás 500ml.", img: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80" }
+    ];
+
+    // Cadastro do cliente
+    let cliente = null;
+    document.getElementById('order-type').addEventListener('change', function() {
+        document.getElementById('customer-table').style.display = this.value === 'mesa' ? 'block' : 'none';
+    });
+    document.getElementById('customer-form').onsubmit = function(e) {
+        e.preventDefault();
+        const nome = document.getElementById('customer-name').value.trim();
+        const telefone = document.getElementById('customer-phone').value.trim();
+        const tipo = document.getElementById('order-type').value;
+        const mesa = tipo === 'mesa' ? document.getElementById('customer-table').value.trim() : '';
+        if (!nome || !telefone || !tipo || (tipo === 'mesa' && !mesa)) {
+            alert('Preencha todos os campos!');
+            return;
+        }
+        cliente = { nome, telefone, tipo, mesa };
+        document.getElementById('customer-modal').style.display = 'none';
+    };
+
+    // Renderização dos lanches
+    const lanchesList = document.getElementById('lanches-list');
+    lanches.forEach((lanche, idx) => {
+        const div = document.createElement('div');
+        div.className = 'menu-item';
+        div.innerHTML = `
+            <img src="${lanche.img}" alt="${lanche.nome}">
+            <h3>${lanche.nome}</h3>
+            <p>${lanche.descricao}</p>
+            <span class="price">R$ ${lanche.preco.toFixed(2)}</span>
+            <button onclick="abrirPedido('Lanche', '${lanche.nome}', ${lanche.preco})">Pedir</button>
+        `;
+        lanchesList.appendChild(div);
+    });
+
+    // Renderização das porções
+    const porcoesList = document.getElementById('porcoes-list');
+    porcoes.forEach((porcao, idx) => {
+        const div = document.createElement('div');
+        div.className = 'menu-item';
+        let botoes = porcao.tamanhos.map(t => 
+            `<button onclick="abrirPedido('Porção', '${porcao.nome} (${t.t})', ${t.v})">${t.t}: R$ ${t.v.toFixed(2)}</button>`
+        ).join(' ');
+        div.innerHTML = `
+            <img src="${porcao.img}" alt="${porcao.nome}">
+            <h3>${porcao.nome}</h3>
+            <p>${porcao.descricao}</p>
+            <div class="portion-sizes">${botoes}</div>
+        `;
+        porcoesList.appendChild(div);
+    });
+
+    // Renderização das bebidas
+    const bebidasList = document.getElementById('bebidas-list');
+    bebidas.forEach((bebida, idx) => {
+        const div = document.createElement('div');
+        div.className = 'menu-item';
+        div.innerHTML = `
+            <img src="${bebida.img}" alt="${bebida.nome}">
+            <h3>${bebida.nome}</h3>
+            <p>${bebida.descricao}</p>
+            <span class="price">R$ ${bebida.preco.toFixed(2)}</span>
+            <button onclick="abrirPedido('Bebida', '${bebida.nome}', ${bebida.preco})">Pedir</button>
+        `;
+        bebidasList.appendChild(div);
+    });
+
+    // Modal de pedido
+    let pedidoAtual = {};
+    function abrirPedido(tipo, nome, preco) {
+        if (!cliente) {
+            document.getElementById('customer-modal').style.display = 'flex';
+            return;
+        }
+        pedidoAtual = { tipo, nome, preco };
+        document.getElementById('pedido-produto').innerHTML = `<b>${nome}</b>`;
+        document.getElementById('pedido-valor').innerHTML = `Valor: <b>R$ ${preco.toFixed(2)}</b>`;
+        document.getElementById('order-modal').style.display = 'flex';
+    }
+    function fecharModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+    document.getElementById('confirmar-pedido').onclick = function() {
+        let msg = `Pedido realizado!\nCliente: ${cliente.nome}\nTelefone: ${cliente.telefone}\nTipo: ${cliente.tipo === 'delivery' ? 'Delivery' : 'Mesa ' + cliente.mesa}\nProduto: ${pedidoAtual.nome}\nValor: R$ ${pedidoAtual.preco.toFixed(2)}\n\n*Funcionalidade de envio real requer integração com backend ou WhatsApp.`;
+        alert(msg);
+        fecharModal();
+    };
+    window.abrirPedido = abrirPedido;
+    window.fecharModal = fecharModal;
+</script>
+</body>
+</html>
